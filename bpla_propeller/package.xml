@@ -3,7 +3,7 @@
 <package format="3">
   <name>bpla_propeller</name>
   <version>0.0.1</version>
-  <description>BPLA Propeller Control System - ROS 2 Humble</description>
+  <description>BPLA Propeller Control and Visualization - ROS 2 Humble</description>
   <maintainer email="your_email@example.com">your_name</maintainer>
   <license>MIT</license>
 
@@ -13,6 +13,8 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>bpla_propeller_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>geometry_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -1,12 +1,19 @@
-# 🚁 BPLA Propeller Simulator
 
-**ROS 2 Humble | Python | Custom Messages**
+# 🚁 BPLA Propeller Simulator & Visualization
 
-Проект №1 
+**ROS 2 Humble | Python | Custom Messages | RViz**
 
-## 📋 Описание
+Проект RSE БПЛА
 
-Симулятор управления оборотами несущего винта с публикацией кастомного сообщения `PropellerCommand` в топик `/propeller/cmd`. RPM меняется по синусоидальному закону (1000 ± 200 об/мин), имитируя работу реальной системы управления двигателем.
+
+## 📋 Что реализовано
+
+- ✅ Кастомное сообщение `PropellerCommand` (rpm + motor_name)
+- ✅ Симулятор оборотов `propeller_sim` (синусоида 1000±200 RPM)
+- ✅ Визуализация в RViz `propeller_viz` (втулка + две лопасти LINE_STRIP)
+- ✅ Ручное управление RPM через `ros2 topic pub`
+- ✅ Авто-остановка при потере связи (таймаут 0.5 сек)
+
 
 ## 🏗️ Архитектура
 
@@ -14,34 +21,43 @@ bpla_propeller_msgs/ # Пакет сообщений
 ├── msg/
 │ └── PropellerCommand.msg # float64 rpm, string motor_name
 └── CMakeLists.txt
-bpla_propeller/ # Пакет ноды
+bpla_propeller/ # Пакет управления и визуализации
 ├── bpla_propeller/
-│ └── propeller_sim.py # Нода-симулятор
-└── CMakeLists.txt
+│ ├── propeller_sim.py # Симулятор оборотов
+│ └── propeller_viz.py # 3D-визуализация (RViz MarkerArray)
+├── CMakeLists.txt
+└── package.xml
+
 
 ## 🔧 Запуск
 
-```bash
 # Клонировать репозиторий
 cd ~/bpla_ws/src
 git clone https://github.com/Evgeniy9614/bpla_propeller.git
 
 # Сборка
 cd ~/bpla_ws
-colcon build --packages-select bpla_propeller_msgs bpla_propeller --symlink-install
-
-# Запуск
+colcon build --symlink-install
 source install/setup.bash
-ros2 run bpla_propeller propeller_sim.py
 
-# Проверка (в другом терминале)
-ros2 topic echo /propeller/cmd
+# Терминал 1: RViz
+rviz2
+# Fixed Frame → world, Add → By topic → /propeller/markers
 
-## 📦 Зависимости
-    • ROS 2 Humble
-    • Python 3.10+
-    • rclp 
-##🎯 Применение в БПЛА
-    • Винты/роторы: задание оборотов через PropellerCommand.rpm
-    • Тяга: RPM → тяга через аэродинамический коэффициент (в следующих проектах)
-    • Микшер: распределение RPM по 4+ моторам квадрокоптера
+# Терминал 2: Визуализация
+ros2 run bpla_propeller propeller_viz.py
+
+# Терминал 3: Управление RPM
+ros2 topic pub /propeller/cmd bpla_propeller_msgs/msg/PropellerCommand "{rpm: 600.0, motor_name: 'main'}" -r 10
+
+
+## 🎮 Управление
+
+# Медленно
+ros2 topic pub /propeller/cmd ... "{rpm: 200.0, ...}" -1
+
+# Быстро (взлётный режим)
+ros2 topic pub /propeller/cmd ... "{rpm: 2500.0, ...}" -1
+
+# Остановка
+ros2 topic pub /propeller/cmd ... "{rpm: 0.0, ...}" -1

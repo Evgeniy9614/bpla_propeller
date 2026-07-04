@@ -12,6 +12,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
   bpla_propeller/propeller_sim.py
+  bpla_propeller/propeller_viz.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
