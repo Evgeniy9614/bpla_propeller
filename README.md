@@ -24,7 +24,7 @@ bpla_propeller/ # Пакет ноды
 ```bash
 # Клонировать репозиторий
 cd ~/bpla_ws/src
-git clone https://github.com/Evgenii14/bpla_propeller.git
+git clone https://github.com/Evgeniy9614/bpla_propeller.git
 
 # Сборка
 cd ~/bpla_ws
