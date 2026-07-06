@@ -15,13 +15,14 @@ setup(
     zip_safe=True,
     maintainer='your_name',
     maintainer_email='your_email@example.com',
-    description='BPLA Control - PID and Mission',
+    description='BPLA Control',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'hover_controller = bpla_control.hover_controller:main',
             'mission_controller = bpla_control.mission_controller:main',
+            'landing_controller = bpla_control.landing_controller:main',
         ],
     },
 )

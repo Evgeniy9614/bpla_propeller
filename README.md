@@ -1,7 +1,7 @@
 
 # 🚁 BPLA Propeller Simulator & Visualization
 
-**ROS 2 Humble | Python | URDF | RViz | TF2 | PID | State Machine**
+**ROS 2 Humble | Python | URDF | RViz | TF2 | PID | State Machine | Computer Vision**
 ## 📦 Проекты
 
 ### 1. Propeller Simulator (`bpla_propeller_msgs` + `bpla_propeller`)
@@ -40,6 +40,13 @@
 - ✅ Автоматический цикл миссии: GROUND → TAKEOFF → HOVER → WAYPOINT → LAND
 - ✅ Полёт по 4 точкам (квадрат 5×5 м)
 - ✅ Циклическое повторение миссии
+### 7. Vision Landing Controller (`bpla_control`)
+- ✅ Посадка на AprilTag по визуальной метке
+- ✅ Симуляция камеры с перспективной проекцией и шумом
+- ✅ Конечный автомат: SEARCH → APPROACH → LAND → DONE
+- ✅ Точность посадки < 1 см
+- ✅ Интеграция с PID-регулятором высоты
+
 
 
 ## 🏗️ Архитектура
@@ -105,4 +112,7 @@ ros2 run bpla_control hover_controller
 # Миссия (Проект 6)
 ros2 run bpla_control mission_controller
 # Автоматический цикл: взлёт → квадрат 5×5м → посадка → повтор
+
+# Посадка на метку (Проект 7)
+ros2 run bpla_control landing_controller
 
