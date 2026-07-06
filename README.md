@@ -1,7 +1,7 @@
 
 # 🚁 BPLA Propeller Simulator & Visualization
 
-**ROS 2 Humble | Python | URDF | RViz | TF2 | PID Control**
+**ROS 2 Humble | Python | URDF | RViz | TF2 | PID | State Machine**
 ## 📦 Проекты
 
 ### 1. Propeller Simulator (`bpla_propeller_msgs` + `bpla_propeller`)
@@ -35,6 +35,12 @@
 - ✅ Автоматический расчёт RPM висения (495 RPM)
 - ✅ Стабилизация на 10 метрах за 2 секунды
 - ✅ Анти-windup защита интегральной составляющей
+### 6. Mission Controller (`bpla_control`)
+- ✅ Конечный автомат (State Machine) на 5 состояний
+- ✅ Автоматический цикл миссии: GROUND → TAKEOFF → HOVER → WAYPOINT → LAND
+- ✅ Полёт по 4 точкам (квадрат 5×5 м)
+- ✅ Циклическое повторение миссии
+
 
 ## 🏗️ Архитектура
 
@@ -93,8 +99,10 @@ ros2 launch bpla_description display_with_propellers.launch.py
 # RViz: Fixed Frame → base_link, Add → RobotModel, Description Topic → /robot_description
 ros2 topic pub /propeller/cmd ... "{rpm: 600.0, ...}" -r 10
 # PID-регулятор (Проект 5)
-
 ros2 run bpla_control hover_controller
 # Дрон взлетает на 10 метров и стабилизируется
 
+# Миссия (Проект 6)
+ros2 run bpla_control mission_controller
+# Автоматический цикл: взлёт → квадрат 5×5м → посадка → повтор
 
