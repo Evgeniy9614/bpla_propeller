@@ -4,7 +4,7 @@
   <name>bpla_description</name>
   <version>0.0.1</version>
   <description>Quadcopter URDF model with TF frames</description>
-  <maintainer email="your_email@example.com">your_name</maintainer>
+  <maintainer email="anisimovevgenij90@gmail.com">Evgenii_Anisimov</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

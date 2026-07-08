@@ -4,7 +4,7 @@
   <name>bpla_mavlink</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="creening@mail.ru">root</maintainer>
+  <maintainer email="anisimovevgenij90@gmail.com">Evgenii_Anisimov</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
