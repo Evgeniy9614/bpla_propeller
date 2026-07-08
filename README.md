@@ -63,6 +63,14 @@
 - ✅ Предупреждения при превышении порога вибрации
 - ✅ Настраиваемый порог через ROS 2 параметры
 
+### 9. MAVLink Integration (`bpla_mavlink`) — C++ + Python
+
+- ✅ Мост между ROS 2 и протоколом MAVLink (Pixhawk/PX4)
+- ✅ Симуляция HEARTBEAT, телеметрии, команд управления
+- ✅ MAVLink message IDs: HEARTBEAT(0), ATTITUDE(30), GLOBAL_POSITION(33)
+- ✅ Команды: TAKEOFF, LAND, GOTO, RTL
+- ✅ Публикация топиков: `/mavlink/position`, `/mavlink/setpoint`, `/mavlink/battery`
+
 ## 🏗️ Архитектура системы
 
                              ┌─────────────────────────┐
@@ -79,22 +87,22 @@
                         │    string motor_name            │
                         └──────────┬──────────────────────┘
                                    │
-            ┌──────────────────────┼──────────────────────────┐
-            │                      │                          │
-            ▼                      ▼                          ▼
-    ┌───────────────┐    ┌─────────────────┐    ┌──────────────────────┐
-    │ propeller_viz │    │ propeller_joint │    │ bpla_control         │
-    │   (Python)    │    │    _bridge      │    │   (Python)           │
-    │               │    │   (Python)      │    │                      │
-    │ MarkerArray   │    │                 │    │ hover_controller     │
-    │ втулка +      │    │ RPM → угол      │    │ mission_controller   │
-    │ 2 лопасти     │    │ 12 joint'ов     │    │ landing_controller   │
-    └───────┬───────┘    └───────┬─────────┘    └──────────┬───────────┘
-            │                    │                         │
-            ▼                    ▼                         │
-          RViz            /joint_states                    │
-                      ┌───────────────┐                    │
-                      │ robot_state_  │                    │
+            ┌──────────────────────┼──────────────────────────┐───────────────────┐
+            │                      │                          │                   │    
+            ▼                      ▼                          ▼                   ▼
+    ┌───────────────┐    ┌─────────────────┐    ┌──────────────────────┐   ┌──────────────┐
+    │ propeller_viz │    │ propeller_joint │    │ bpla_control         │   │ bpla_mavlink │
+    │   (Python)    │    │    _bridge      │    │   (Python)           │   │ (C++/Python) │
+    │               │    │   (Python)      │    │                      │   │              │
+    │ MarkerArray   │    │                 │    │ hover_controller     │   │  HEARTBEAT   │
+    │ втулка +      │    │ RPM → угол      │    │ mission_controller   │   │  SETPOINT    │
+    │ 2 лопасти     │    │ 12 joint'ов     │    │ landing_controller   │   │  TELEMETRY   │
+    └───────┬───────┘    └───────┬─────────┘    └──────────┬───────────┘   └──────┬───────┘
+            │                    │                         │                      │                      
+            ▼                    ▼                         │                      ▼
+          RViz            /joint_states                    │                /mavlink/position
+                      ┌───────────────┐                    │                /mavlink/setpoint
+                      │ robot_state_  │                    │                /mavlink/battery
                       │   publisher   │                    │
                       └───────┬───────┘                    │
                               │                            │
@@ -112,7 +120,6 @@
                                              │   v = v + a·dt            │
                                              │   h = h + v·dt            │
                                              └───────────────────────────┘
-        
 
 ## 🔄 Поток данных
 
@@ -127,6 +134,7 @@ PID-регулятор
   │
   ├──► propeller_viz ──► MarkerArray ──► RViz (3D пропеллер)
   │
+  │
   ├──► propeller_joint_bridge ──► /joint_states
   │                                    │
   │                                    ▼
@@ -134,6 +142,12 @@ PID-регулятор
   │                                    │
   │                                    ▼
   │                              /tf ──► RViz (модель дрона)
+  │ 
+  │
+  ├──► mavlink_bridge ──► /mavlink/position (HEARTBEAT)
+  │                   ──► /mavlink/setpoint (команды)
+  │                   ──► /mavlink/battery (телеметрия)
+  │
   │
   ├──► imu_simulator (C++) ──► /imu/data_raw
   │                                    │
@@ -144,6 +158,7 @@ PID-регулятор
   │                                    │
   │                              ⚠️ WARNING (амплитуда > порог)
   │
+  │
   └──► (модель физики) ──► высота/скорость ──► снова PID ↩︎
 ```
 
@@ -152,7 +167,6 @@ PID-регулятор
 ### Миссия (mission_controller)
 
 ```
-
      ┌──────────┐
      │  GROUND  │◄───────────────────────────────────┐
      └────┬─────┘                                    │
@@ -177,7 +191,7 @@ PID-регулятор
                                    └────┬─────┘      │
                               (посадка) │ H < 0.1 м  │ 
                                         └────────────┘
-   
+
 |  Состояние   |        Что делает        |    Условие перехода  |
 |--------------|--------------------------|----------------------|
 | **GROUND**   | Стоим на земле, ждём     |   Через 2 секунды    |
@@ -208,13 +222,45 @@ PID-регулятор
      ┌──────────┐
      │   DONE   │  (миссия завершена)
      └──────────┘
-     
+
 |  Состояние   |        Что делает        |    Условие перехода  |
 |--------------|--------------------------|----------------------|
 | **SEARCH**   | Висим на 10 м, ищем метку| Через 3 секунды      |
 | **APPROACH** | Снижаемся, летим к метке | Над меткой и H < 5 м |
 | **LAND**     | Вертикальная посадка     | Высота < 0.1 м       |
 | **DONE**     |    Миссия завершена      |         —            |
+```
+
+#### 🔌 MAVLink интеграция
+
+```
+Наземная станция (GCS) Полётный контроллер     ROS 2 ноды
+(QGroundControl)          (Pixhawk/PX4)      (bpla_mavlink)
+        │                       │                  │
+        │ HEARTBEAT (1 Hz)      │                  │
+        │◄──────────────────────│                  │
+        │                       │                  │
+        │ ATTITUDE (10 Hz)      │                  │
+        │◄──────────────────────│                  │
+        │                       │                  │
+        │ SET_POSITION (x,y,z)  │                  │
+        │──────────────────────►│                  │
+        │                       │                  │
+        │                       │   /propeller/cmd │ 
+        │                       │◄─────────────────│
+        │                       │                  │
+        │ COMMAND_LONG (TAKEOFF)│                  │
+        │──────────────────────►│                  │
+
+
+| MAVLink сообщение   |  ID |     Назначение     |      Топик          |
+|---------------------|-----|--------------------|---------------------|
+| HEARTBEAT           |  0  | Контроллер жив     | `/mavlink/position` |
+| ATTITUDE            | 30  | Крен, тангаж       | `/mavlink/position` |
+| GLOBAL_POSITION_INT | 33  | GPS координаты     | `/mavlink/position` |
+| SET_POSITION_TARGET | 84  | Команда движения   | `/mavlink/setpoint` |
+| COMMAND_LONG        | 76  | TAKEOFF/LAND/RTL   | `/mavlink/setpoint` |
+| BATTERY_STATUS      | 147 | Напряжение батареи | `/mavlink/battery`  |
 ```
 
 ## 🌳 Кинематическая схема (TF)
@@ -248,53 +294,67 @@ PID-регулятор
 ## 📦 Зависимости пакетов
 
 ```
-  bpla_propeller_msgs           ← сообщения (не зависит ни от кого)
+  bpla_propeller_msgs     ← сообщения (не зависит ни от кого)
          │
-         ├──────────────────────────────┐
-         │                              │
-         ▼                              ▼
-    bpla_propeller               bpla_control
-    (визуализация, мост)         (PID, миссия, посадка)
-         │                              │
-         │                              │
-         ▼                              │
-    bpla_description                    │
-    (URDF, launch)                      │
-         │                              │
-         │                              │
-         ▼                              ▼
-    bpla_gazebo                  bpla_diagnostics
-    (симуляция)                    (FFT, C++)
+         ├──────────────────────────────┬────────────────────────┐
+         │                              │                        │
+         ▼                              ▼                        ▼
+    bpla_propeller               bpla_control                bpla_mavlink
+    (визуализация, мост)         (PID, миссия, посадка)     (MAVLink мост)
+         │                              │                        │
+         │                              │                        │
+         ▼                              │                        │
+    bpla_description                    │                        │
+    (URDF, launch)                      │                        │
+         │                              │                        │
+         │                              │                        │
+         ▼                              ▼                        │ 
+    bpla_gazebo                  bpla_diagnostics                │
+    (симуляция)                    (FFT, C++)                    │
+         │                                                       │
+         └───────────────────────────────────────────────────────┘
+
+Все пакеты используют
+PropellerCommand  
 ```
 
 ## 🏗️ Структура репозитория
 
 ```
-~/bpla_ws/src/
-├── bpla_propeller_msgs/ # Кастомные ROS 2 сообщения
-│ └── msg/
-│ └── PropellerCommand.msg
-├── bpla_propeller/ # Управление и визуализация пропеллера
-│ ├── propeller_sim.py # Симулятор RPM
-│ ├── propeller_viz.py # 3D-визуализация (MarkerArray)
-│ └── propeller_joint_bridge.py # RPM → JointStates
-├── bpla_description/ # URDF-модель квадрокоптера
-│ ├── urdf/
-│ │ └── quadcopter.urdf # Кинематическая схема
-│ └── launch/
-│ ├── display.launch.py
-│ ├── display_bridge.launch.py
-│ └── display_with_propellers.launch.py
-├── bpla_gazebo/ # Симуляция в Gazebo
-│ ├── scripts/
-│ │ └── thrust_controller.py
-│ ├── launch/
-│ │ └── simulate.launch.py
-│ └── worlds/
-│ └── empty_with_plugins.world
-└── bpla_control/ # PID-регулятор высоты
-└── bpla_control/
-└── hover_controller.py
+bpla_ws/src/
+├── bpla_propeller_msgs/ # Сообщения
+│    └── msg/PropellerCommand.msg
+│
+├── bpla_propeller/ # Визуализация + мост (Python)
+│          ├── propeller_sim.py
+│          ├── propeller_viz.py
+│          └── propeller_joint_bridge.py
+│
+├── bpla_description/ # URDF-модель
+│          ├── urdf/quadcopter.urdf
+│          └── launch/
+│
+├── bpla_gazebo/ # Симулятор
+│          ├── scripts/thrust_controller.py
+│          └── launch/simulate.launch.py
+│
+├── bpla_control/ # Управление (Python)
+│          ├── hover_controller.py # PID-регулятор
+│          ├── mission_controller.py # State Machine миссии
+│          └── landing_controller.py # Посадка на AprilTag
+│
+├── bpla_diagnostics/ # Диагностика (C++)
+│          ├── src/
+│          │    ├── vibration_monitor.cpp # FFT-анализатор
+│          │    └── imu_simulator.cpp # Имитатор акселерометра
+│          └── CMakeLists.txt
+│
+└── bpla_mavlink/ # MAVLink интеграция (C++ + Python)
+           ├── src/
+           │     └── mavlink_commander.cpp # Команды управления
+           ├── bpla_mavlink/
+           │     └── mavlink_bridge.py # Мост ROS 2 ↔ MAVLink
+           └── CMakeLists.txt
 ```
 
 ## 🔧 Быстрый старт
@@ -310,14 +370,14 @@ cd ~/bpla_ws
 colcon build --symlink-install
 source install/setup.bash
 
-| Проект           | Команда                                                                                   |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| Пропеллер + RViz | `ros2 run bpla_propeller propeller_viz.py`                                                |
-| URDF + мост      | `ros2 launch bpla_description display_with_propellers.launch.py`                          |
-| PID-регулятор    | `ros2 run bpla_control hover_controller`                                                  |
-| Миссия           | `ros2 run bpla_control mission_controller`                                                |
-| Посадка на метку | `ros2 run bpla_control landing_controller`                                                |
-| FFT + IMU        | `ros2 run bpla_diagnostics imu_simulator` + `ros2 run bpla_diagnostics vibration_monitor` |
-| Управление RPM   | `ros2 topic pub /propeller/cmd ... "{rpm: 600.0}" -r 10`                                  |
-
-
+| Проект            | Команда                                                          |
+| ----------------- | ---------------------------------------------------------------- |
+| Пропеллер + RViz  | `ros2 run bpla_propeller propeller_viz.py`                       |
+| URDF + мост       | `ros2 launch bpla_description display_with_propellers.launch.py` |
+| PID-регулятор     | `ros2 run bpla_control hover_controller`                         |
+| Миссия            | `ros2 run bpla_control mission_controller`                       |
+| Посадка на метку  | `ros2 run bpla_control landing_controller`                       |
+| FFT + IMU         | `ros2 run bpla_diagnostics imu_simulator` + `vibration_monitor`  |
+| MAVLink Bridge    | `ros2 run bpla_mavlink mavlink_bridge.py`                        |
+| MAVLink Commander | `ros2 run bpla_mavlink mavlink_commander`                        |
+| Управление RPM    | `ros2 topic pub /propeller/cmd ... "{rpm: 600.0}" -r 10`         |
