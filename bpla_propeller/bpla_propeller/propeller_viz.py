@@ -72,9 +72,14 @@ class PropellerViz(Node):
             blade.type = Marker.LINE_STRIP
             blade.action = Marker.ADD
             blade.scale.x = self.blade_width
-            blade.color.r = 0.9
-            blade.color.g = 0.9
-            blade.color.b = 0.9
+            
+            # Плавный цвет по RPM (зелёный → жёлтый → красный)
+            ratio = min(self.rpm / 1500.0, 1.0)
+            blade.color.r = ratio
+            blade.color.g = 1.0 - ratio
+            self.get_logger().info(f"RPM={self.rpm:.0f} ratio={ratio:.2f} r={blade.color.r:.2f} g={blade.color.g:.2f}")
+            blade.color.b = 0.0
+            
             blade.color.a = 1.0
             
             p1 = Point()
