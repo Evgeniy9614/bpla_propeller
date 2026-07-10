@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
-<robot name="quadcopter" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="quadcopter"
+  xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- ====== МАТЕРИАЛЫ ====== -->
+  <!-- МАТЕРИАЛЫ  -->
   <material name="black">
     <color rgba="0.2 0.2 0.2 1.0"/>
   </material>
@@ -15,7 +16,7 @@
     <color rgba="0.9 0.9 0.9 1.0"/>
   </material>
 
-  <!-- ====== БАЗОВАЯ СИСТЕМА КООРДИНАТ (корпус) ====== -->
+  <!-- БАЗОВАЯ СИСТЕМА КООРДИНАТ (корпус) -->
   <link name="base_link">
     <visual>
       <geometry>
@@ -35,9 +36,38 @@
     </inertial>
   </link>
 
-  <!-- ====== ЛУЧИ ====== -->
-  <!-- Макрос для луча: name, x, y, z, rotation_z -->
-  
+  <!-- Переднее шасси -->
+  <link name="landing_gear_front">
+    <visual>
+      <geometry>
+        <cylinder radius="0.005" length="0.1"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="lg_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="landing_gear_front"/>
+    <origin xyz="0 0.08 -0.03" rpy="0 1.5708 0"/>
+  </joint>
+
+  <!-- Заднее шасси -->
+  <link name="landing_gear_rear">
+    <visual>
+      <geometry>
+        <cylinder radius="0.005" length="0.1"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <joint name="lg_rear_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="landing_gear_rear"/>
+    <origin xyz="0 -0.08 -0.03" rpy="0 1.5708 0"/>
+  </joint>
+
   <!-- Луч 1 (передний правый) -->
   <link name="arm_1">
     <visual>
@@ -118,8 +148,6 @@
     <origin xyz="0.1 -0.1 0" rpy="0 0 -0.7854"/>
   </joint>
 
-  <!-- ====== МОТОРЫ (4 шт, на концах лучей) ====== -->
-  
   <!-- Мотор 1 -->
   <link name="motor_1">
     <visual>
@@ -196,8 +224,6 @@
     <origin xyz="0.3 0 0.04" rpy="0 0 0"/>
   </joint>
 
-  <!-- ====== ПРОПЕЛЛЕРЫ (вращающиеся) ====== -->
-  
   <!-- Пропеллер 1 -->
   <link name="prop_1">
     <visual>
