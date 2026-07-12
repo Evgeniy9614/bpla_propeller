@@ -1,6 +1,6 @@
 # 🚁 BPLA Propeller Simulator & Visualization
 
-**ROS 2 Humble | Python | URDF | RViz | TF2 | PID | State Machine | Computer Vision**
+**ROS 2 Humble | Python | C++ | URDF | RViz | TF2 | PID | FFT | CV | MAVLink | RMS**
 
 ## 📦 Проекты
 
@@ -70,6 +70,14 @@
 - ✅ MAVLink message IDs: HEARTBEAT(0), ATTITUDE(30), GLOBAL_POSITION(33)
 - ✅ Команды: TAKEOFF, LAND, GOTO, RTL
 - ✅ Публикация топиков: `/mavlink/position`, `/mavlink/setpoint`, `/mavlink/battery`
+
+### 10. RMS — Remote Management System (`bpla_remote`) — C++ + Python
+
+- ✅ TCP-сервер на дроне (C++): принимает команды, публикует в ROS 2
+- ✅ TCP-клиент (Python): консоль оператора
+- ✅ Команды: TAKEOFF, LAND, RPM, STATUS
+- ✅ Многопоточная обработка соединений
+- ✅ Клиент-серверная архитектура для удалённого управления
 
 ## 🏗️ Архитектура системы
 
@@ -311,7 +319,7 @@ PID-регулятор
          ▼                              ▼                        │ 
     bpla_gazebo                  bpla_diagnostics                │
     (симуляция)                    (FFT, C++)                    │
-         │                                                       │
+         │       bpla_remote  ← RMS (C++ сервер + Python клиент) │
          └───────────────────────────────────────────────────────┘
 
 Все пакеты используют
@@ -349,11 +357,18 @@ bpla_ws/src/
 │          │    └── imu_simulator.cpp # Имитатор акселерометра
 │          └── CMakeLists.txt
 │
-└── bpla_mavlink/ # MAVLink интеграция (C++ + Python)
+├── bpla_mavlink/ # MAVLink интеграция (C++ + Python)
+│          ├── src/
+│          │     └── mavlink_commander.cpp # Команды управления
+│          ├── bpla_mavlink/
+│          │     └── mavlink_bridge.py # Мост ROS 2 ↔ MAVLink
+│          └── CMakeLists.txt
+│          
+└── bpla_remote/               # Удалённое управление (C++ + Python)
            ├── src/
-           │     └── mavlink_commander.cpp # Команды управления
-           ├── bpla_mavlink/
-           │     └── mavlink_bridge.py # Мост ROS 2 ↔ MAVLink
+           │    └── rms_server.cpp         # TCP-сервер
+           ├── scripts/
+           │   └── rms_client.py          # Консоль оператора
            └── CMakeLists.txt
 ```
 
@@ -370,14 +385,16 @@ cd ~/bpla_ws
 colcon build --symlink-install
 source install/setup.bash
 
-| Проект            | Команда                                                          |
-| ----------------- | ---------------------------------------------------------------- |
-| Пропеллер + RViz  | `ros2 run bpla_propeller propeller_viz.py`                       |
-| URDF + мост       | `ros2 launch bpla_description display_with_propellers.launch.py` |
-| PID-регулятор     | `ros2 run bpla_control hover_controller`                         |
-| Миссия            | `ros2 run bpla_control mission_controller`                       |
-| Посадка на метку  | `ros2 run bpla_control landing_controller`                       |
-| FFT + IMU         | `ros2 run bpla_diagnostics imu_simulator` + `vibration_monitor`  |
-| MAVLink Bridge    | `ros2 run bpla_mavlink mavlink_bridge.py`                        |
-| MAVLink Commander | `ros2 run bpla_mavlink mavlink_commander`                        |
-| Управление RPM    | `ros2 topic pub /propeller/cmd ... "{rpm: 600.0}" -r 10`         |
+| Проект            | Команда                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| Пропеллер + RViz  | `ros2 run bpla_propeller propeller_viz.py`                                          |
+| URDF + мост       | `ros2 launch bpla_description display_with_propellers.launch.py`                    |
+| PID-регулятор     | `ros2 run bpla_control hover_controller`                                            |
+| Миссия            | `ros2 run bpla_control mission_controller`                                          |
+| Посадка на метку  | `ros2 run bpla_control landing_controller`                                          |
+| FFT + IMU         | `ros2 run bpla_diagnostics imu_simulator` + `vibration_monitor`                     |
+| MAVLink Bridge    | `ros2 run bpla_mavlink mavlink_bridge.py`                                           |
+| MAVLink Commander | `ros2 run bpla_mavlink mavlink_commander`                                           |
+| Управление RPM    | `ros2 topic pub /propeller/cmd ... "{rpm: 600.0}" -r 10`                            |
+| RMS Server        | `~/bpla_ws/install/bpla_remote/lib/bpla_remote/rms_server --ros-args -p port:=8080` |
+| RMS Client        | `~/bpla_ws/install/bpla_remote/lib/bpla_remote/rms_client.py`                       |
