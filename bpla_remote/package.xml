@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>bpla_remote</name>
+  <version>0.0.1</version>
+  <description>RMS - Remote Management System</description>
+  <maintainer email="your_email@example.com">your_name</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>bpla_propeller_msgs</depend>
+</package>
